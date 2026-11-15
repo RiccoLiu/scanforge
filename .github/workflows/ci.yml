@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  # core/ + cli/ + tests/ must ALWAYS build without Qt and without network
+  # dependencies. This job is the guard for the "core is Qt-free" rule.
+  core:
+    name: core + cli + tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure (no Qt)
+        run: cmake -S . -B build -DSCANFORGE_BUILD_APP=OFF -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release --parallel 4
+
+      - name: Unit tests
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Headless pipeline smoke test (Windows)
+        if: runner.os == 'Windows'
+        run: .\build\cli\Release\scanforge-cli.exe --frames 6 --output smoke.ply --report smoke.md
+
+      - name: Headless pipeline smoke test (Unix)
+        if: runner.os != 'Windows'
+        run: ./build/cli/scanforge-cli --frames 6 --output smoke.ply --report smoke.md
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-report-${{ matrix.os }}
+          path: smoke.md
+          if-no-files-found: ignore
+
+  # Full GUI build. Qt is installed on demand; this job validates AUTOMOC,
+  # the plugin target, and the Qt6 Widgets/OpenGLWidgets link lines.
+  qt:
+    name: Qt6 GUI build (ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OpenGL / X11 development packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-x11-0 libxcb-cursor0
+
+      - name: Install Qt 6.8 LTS
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.*'
+          cache: true
+
+      - name: Configure (with Qt)
+        run: cmake -S . -B build-qt -DSCANFORGE_BUILD_APP=ON -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build GUI + plugin
+        run: cmake --build build-qt --parallel 4

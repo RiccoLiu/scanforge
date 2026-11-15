@@ -1,0 +1,7 @@
+{
+    "name": "Mock Line-Laser Camera",
+    "vendor": "ScanForge",
+    "version": "0.1.0",
+    "category": "Camera",
+    "description": "Synthetic line-laser camera with injectable noise, dropped frames, time offset and calibration bias"
+}

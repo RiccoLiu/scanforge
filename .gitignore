@@ -1,0 +1,38 @@
+# Build trees
+build/
+build-*/
+out/
+cmake-build-*/
+CMakeUserPresets.json
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.user.*
+
+# Generated artefacts
+*.ply
+*.pcd
+!testdata/*.ply
+*.csv
+*.log
+*.pdf
+*.obj
+*.dll
+*.so
+*.dylib
+*.exe
+*.lib
+*.a
+
+# Qt
+moc_*
+ui_*
+qrc_*
+*.qm
+
+# OS
+.DS_Store
+Thumbs.db

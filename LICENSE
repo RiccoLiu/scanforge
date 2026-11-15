@@ -1,0 +1,36 @@
+MIT License
+
+Copyright (c) 2026 ScanForge contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-----------------------------------------------------------------------------
+Third-party notice
+-----------------------------------------------------------------------------
+This repository contains only original code. Dependencies are NOT vendored.
+
+  * Qt 6            LGPLv3 / GPLv3 / commercial. Use dynamic linking, keep
+                    Qt libraries replaceable, and ship the Qt license text.
+  * Catch2 v3       BSL-1.0 (opt-in via SCANFORGE_USE_CATCH2)
+  * OpenCV / PCL /
+    Open3D / VTK    only introduced in later roadmap stages; check each
+                    project's own LICENSE before adding it as a dependency.
+
+GPL-licensed projects (CloudCompare, SLStudio) are referenced for ARCHITECTURE
+STUDY ONLY. No code from them is copied into this repository.
