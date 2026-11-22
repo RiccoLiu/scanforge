@@ -64,14 +64,18 @@ ctest --test-dir build -C Debug --output-on-failure
 
 Qt 层在没装 Qt6 时会被 CMake 自动跳过，**core / cli / tests 仍可完整构建运行**——这正是 `core/` 解耦的验收标准。
 
-### 构建完整 GUI（需要 Qt 6.8 LTS 或更新 LTS）
+### 在 Windows 上用 vcpkg 构建完整 GUI
 
-```bash
-cmake -S . -B build -DCMAKE_PREFIX_PATH=<Qt6.8>/lib/cmake \
-      -DSCANFORGE_BUILD_APP=ON
-cmake --build build --config Release
-# 插件输出到 build/plugins/，程序启动后点 Connect 自动扫描该目录
+安装 Visual Studio 2022 的 C++ 桌面开发工具和 vcpkg。将 `VCPKG_ROOT` 设为本机的 vcpkg 根目录，例如 `D:\work\vcpkg`，然后在仓库根目录执行：
+
+```powershell
+$env:VCPKG_ROOT = 'D:\work\vcpkg'
+cmake --preset windows-vcpkg
+cmake --build --preset windows-vcpkg
+ctest --preset windows-vcpkg
 ```
+
+首次配置会根据 `vcpkg.json` 安装 Qt Widgets 和 OpenGL 所需的库。也可以在 Git 忽略的 `CMakeUserPresets.json` 中继承 `windows-vcpkg` 并设置 `VCPKG_ROOT`。在 VS Code 中先选配置预设，再用 **CMake: Select Build Preset** 选择 **Debug** 或 **Release**。命令行构建和测试 Debug 时使用 `windows-vcpkg-debug` 预设，沿用同一套 CMake 配置。GUI 分别输出到 `build-windows-vcpkg/app/Debug/ScanForge.exe` 和 `build-windows-vcpkg/app/Release/ScanForge.exe`。
 
 可选开关：`SCANFORGE_USE_CATCH2=ON`（有 Catch2 v3 时改用 `TEST_CASE/REQUIRE`，测试源码不用改）。
 

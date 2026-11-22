@@ -1,0 +1,18 @@
+{
+    "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+    "name": "scanforge",
+    "version-string": "0.1.0",
+    "builtin-baseline": "93ad765c7b66ab9ce97469ec23a90b15c3a14ee5",
+    "features": {
+        "gui": {
+            "description": "Qt dependencies for the desktop application",
+            "dependencies": [
+                {
+                    "name": "qtbase",
+                    "default-features": false,
+                    "features": ["freetype", "opengl", "png", "widgets"]
+                }
+            ]
+        }
+    }
+}

@@ -1,0 +1,48 @@
+{
+    "version": 6,
+    "configurePresets": [
+        {
+            "name": "windows-vcpkg",
+            "displayName": "Windows x64 (MSVC + vcpkg)",
+            "generator": "Visual Studio 17 2022",
+            "architecture": "x64",
+            "toolset": "host=x64",
+            "binaryDir": "${sourceDir}/build",
+            "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+            "cacheVariables": {
+                "VCPKG_TARGET_TRIPLET": "x64-windows",
+                "VCPKG_MANIFEST_FEATURES": "gui",
+                "SCANFORGE_BUILD_APP": true
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "windows-vcpkg",
+            "displayName": "Release",
+            "configurePreset": "windows-vcpkg",
+            "configuration": "Release"
+        },
+        {
+            "name": "windows-vcpkg-debug",
+            "displayName": "Debug",
+            "configurePreset": "windows-vcpkg",
+            "configuration": "Debug"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "windows-vcpkg",
+            "displayName": "Release",
+            "configurePreset": "windows-vcpkg",
+            "configuration": "Release",
+            "output": { "outputOnFailure": true }
+        },
+        {
+            "name": "windows-vcpkg-debug",
+            "displayName": "Debug",
+            "inherits": "windows-vcpkg",
+            "configuration": "Debug"
+        }
+    ]
+}

@@ -19,6 +19,8 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build/bin)
+
 # ---------------------------------------------------------------------------
 # Feature switches. The default configuration builds EVERYTHING that can be
 # built on the current machine: core + cli + tests are Qt-free and always

@@ -14,3 +14,13 @@ target_link_libraries(scanforge_app PRIVATE
     Qt6::Widgets Qt6::OpenGLWidgets)
 add_dependencies(scanforge_app mock_camera)
 set_target_properties(scanforge_app PROPERTIES OUTPUT_NAME ScanForge)
+
+if(WIN32 AND VCPKG_MANIFEST_MODE AND TARGET Qt6::QWindowsIntegrationPlugin)
+    # vcpkg copies linked DLLs, but Qt loads its platform plugin at runtime.
+    add_custom_command(TARGET scanforge_app POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:scanforge_app>/platforms"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:Qt6::QWindowsIntegrationPlugin>"
+            "$<TARGET_FILE_DIR:scanforge_app>/platforms/"
+        VERBATIM)
+endif()
