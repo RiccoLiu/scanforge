@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <memory>
 #include <utility>
+#include <vector>
 
 namespace sf {
 namespace {
@@ -13,16 +14,44 @@ Result<PointCloudPtr> fail(ErrorCode code, const char* message) {
         makeError(code, message, "triangulateLaserLine"));
 }
 
+// Stage 1 detects the brightest pixel per column on an 8-bit luminance plane.
+// Real cameras (e.g. the HikCamera plugin) also deliver Mono16 and RGB8, so
+// derive that plane instead of rejecting the frame. The returned pointer is
+// either into the frame itself (Mono8) or into `buffer`.
+const std::uint8_t* luminancePlane(const Image& image,
+                                   std::vector<std::uint8_t>& buffer) {
+    const auto count = static_cast<std::size_t>(image.width) * image.height;
+    if (image.format == PixelFormat::Mono8) return image.data.data();
+
+    buffer.resize(count);
+    const auto* src = image.data.data();
+    if (image.format == PixelFormat::Mono16) {
+        const auto* words = reinterpret_cast<const std::uint16_t*>(src);
+        for (std::size_t i = 0; i < count; ++i) {
+            buffer[i] = static_cast<std::uint8_t>(words[i] >> 8);
+        }
+    } else if (image.format == PixelFormat::RGB8) {
+        for (std::size_t i = 0; i < count; ++i) {
+            const unsigned r = src[3 * i];
+            const unsigned g = src[3 * i + 1];
+            const unsigned b = src[3 * i + 2];
+            buffer[i] = static_cast<std::uint8_t>((77 * r + 150 * g + 29 * b) >> 8);
+        }
+    }
+    return buffer.data();
+}
+
 } // namespace
 
 Result<PointCloudPtr> triangulateLaserLine(const Frame& frame,
                                            const CalibrationSet& calibration) {
     const Image& image = frame.image;
     if (!image.valid()) return fail(ErrorCode::InvalidArgument, "invalid image buffer");
-    if (image.format != PixelFormat::Mono8)
-        return fail(ErrorCode::UnsupportedFormat, "only Mono8 is supported in stage 1");
     if (!calibration.valid())
         return fail(ErrorCode::CalibrationInvalid, "calibration set is not usable");
+
+    std::vector<std::uint8_t> luminance;
+    const std::uint8_t* pixels = luminancePlane(image, luminance);
 
     const CameraIntrinsics& K = calibration.camera;
     const Plane&            P = calibration.laserPlane;
@@ -43,7 +72,7 @@ Result<PointCloudPtr> triangulateLaserLine(const Frame& frame,
         std::uint32_t bestV = 0;
         std::uint8_t  best  = 0;
         for (std::uint32_t v = 0; v < image.height; ++v) {
-            const std::uint8_t pixel = image.data[static_cast<std::size_t>(v) * image.width + u];
+            const std::uint8_t pixel = pixels[static_cast<std::size_t>(v) * image.width + u];
             if (pixel > best) { best = pixel; bestV = v; }
         }
         if (best < kDetectionThreshold) continue;   // no laser stripe here

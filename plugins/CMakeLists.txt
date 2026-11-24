@@ -12,3 +12,4 @@ target_include_directories(scanforge_device
 target_link_libraries(scanforge_device PUBLIC sf::core Qt6::Widgets)
 
 add_subdirectory(mock_camera)
+add_subdirectory(hik_camera)

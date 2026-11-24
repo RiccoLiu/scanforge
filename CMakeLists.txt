@@ -33,6 +33,8 @@ option(SCANFORGE_USE_CATCH2  "Use Catch2 v3 instead of bundled mini harness" OFF
 
 include(cmake/CompilerWarnings.cmake)
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+
 add_subdirectory(core)
 
 if(SCANFORGE_BUILD_CLI)

@@ -23,6 +23,7 @@ struct DeviceHandle {
     DeviceInfo info;
     IDevice* device = nullptr;                    // owned by the loader
     std::shared_ptr<QPluginLoader> loader;        // MUST outlive `device`
+    QString uri;   // selects this entry inside its plugin ("" = default)
 };
 
 class DeviceManager : public QObject {
@@ -43,6 +44,7 @@ signals:
 
 private:
     QList<DeviceHandle> devices_;
+    DeviceHandle* openedHandle_ = nullptr;   // entry whose device is open now
 };
 
 } // namespace sf

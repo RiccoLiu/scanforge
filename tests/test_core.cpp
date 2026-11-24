@@ -59,6 +59,41 @@ SF_TEST("Image validity is derived from the actual buffer size") {
     SF_CHECK(!image.valid());
 }
 
+SF_TEST("Stage 1 reconstructs Mono16 and RGB8 frames like Mono8") {
+    SynthScene scene = makeDefaultScene();
+    const CancellationToken token;
+    const auto frames = generateFrames(scene, token);
+    SF_CHECK(!frames.empty());
+    const Frame& mono = frames.front();
+    SF_CHECK(mono.image.format == PixelFormat::Mono8);
+    const auto base = triangulateLaserLine(mono, scene.truth);
+    SF_CHECK(base.hasValue());
+
+    Frame mono16 = mono;
+    mono16.image.format = PixelFormat::Mono16;
+    mono16.image.data.clear();
+    for (std::uint8_t v : mono.image.data) {
+        const auto word = static_cast<std::uint16_t>(v) << 8;   // little endian
+        mono16.image.data.push_back(static_cast<std::uint8_t>(word & 0xff));
+        mono16.image.data.push_back(static_cast<std::uint8_t>(word >> 8));
+    }
+    const auto r16 = triangulateLaserLine(mono16, scene.truth);
+    SF_CHECK(r16.hasValue());
+    SF_CHECK(r16.value()->size() == base.value()->size());
+
+    Frame rgb = mono;
+    rgb.image.format = PixelFormat::RGB8;
+    rgb.image.data.clear();
+    for (std::uint8_t v : mono.image.data) {
+        rgb.image.data.push_back(v);
+        rgb.image.data.push_back(v);
+        rgb.image.data.push_back(v);
+    }
+    const auto rrgb = triangulateLaserLine(rgb, scene.truth);
+    SF_CHECK(rrgb.hasValue());
+    SF_CHECK(rrgb.value()->size() == base.value()->size());
+}
+
 SF_TEST("PLY round-trip preserves geometry, intensity and metadata") {
     PointCloud cloud;
     cloud.unit = LengthUnit::Millimeter;

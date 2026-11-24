@@ -1,0 +1,7 @@
+{
+    "name": "Hikvision GenICam Camera",
+    "vendor": "Hikvision",
+    "version": "0.1.0",
+    "category": "Camera",
+    "description": "Preview and acquisition for Hikvision MVS GenICam devices (GigE / USB3 Vision / GenTL). Flow follows the MVS BasicDemo sample: enumerate -> open -> optimal packet size (GigE) -> lazy StartGrabbing -> GetImageBuffer loop."
+}

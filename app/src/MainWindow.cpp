@@ -1,5 +1,7 @@
 #include "MainWindow.hpp"
 
+#include <algorithm>
+
 #include <QAction>
 #include <QApplication>
 #include <QCloseEvent>
@@ -14,6 +16,7 @@
 #include <QTextBrowser>
 #include <QToolBar>
 #include <QVBoxLayout>
+#include <QMenuBar>
 
 #include "scanforge/PlyIO.hpp"
 #include "scanforge/Synthetic.hpp"
@@ -68,6 +71,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
 
     connect(devices_, &DeviceTreeDock::deviceActivated,
             this,     &MainWindow::onDeviceActivated);
+    connect(devices_, &DeviceTreeDock::deviceSelected, this,
+            [this](const QString& id) { onDeviceActivated(id); });
     connect(params_,  &ParameterDock::parameterChanged,
             this,     &MainWindow::onParameterChanged);
 
@@ -82,6 +87,11 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     connect(&controller_, &PipelineController::logMessage, log_, &LogDock::append);
     connect(&manager_,    &DeviceManager::logMessage,      log_, &LogDock::append);
     connect(this,         &MainWindow::logLine,            log_, &LogDock::append);
+
+    auto* viewMenu = menuBar()->addMenu(tr("&View"));
+    viewMenu->addAction(devices_->toggleViewAction());
+    viewMenu->addAction(params_->toggleViewAction());
+    viewMenu->addAction(log_->toggleViewAction());
 
     QSettings settings;
     restoreGeometry(settings.value("geometry").toByteArray());
@@ -101,8 +111,10 @@ void MainWindow::closeEvent(QCloseEvent* event) {
 void MainWindow::updateActions(DeviceState state) {
     // ONE source of truth: the same canTransition() table used by the
     // controller. No duplicated enable/disable logic in every widget.
-    connectAction_->setEnabled(!controller_.isRunning() &&
-                               state == DeviceState::Disconnected);
+    // Connect is allowed whenever no acquisition is in progress - including
+    // Idle (connected, stopped, or after a finished scan).
+    const bool idle = !controller_.isRunning();
+    connectAction_->setEnabled(idle);
     startAction_->setEnabled(current_ != nullptr &&
                              canTransition(state, DeviceEvent::StartAcquire));
     stopAction_->setEnabled(canTransition(state, DeviceEvent::StopAcquire));
@@ -111,23 +123,38 @@ void MainWindow::updateActions(DeviceState state) {
 }
 
 void MainWindow::onConnect() {
+    // Connect enumerates the plugin directory and lists every physical
+    // device it exposes (one tree row per device). Opening happens when the
+    // user single-clicks a row (onDeviceActivated).
+    const bool idle = !controller_.isRunning();
+    if (!idle) {
+        emit logLine("WARN", "cannot scan while acquisition is running");
+        return;
+    }
     const QString pluginDir = QCoreApplication::applicationDirPath() + "/plugins";
     const int count = manager_.scan(pluginDir);
+    emit logLine("INFO", QString("found %1 device(s) in %2").arg(count).arg(pluginDir));
     devices_->setDevices(manager_.discovered());
-    emit logLine("INFO", QString("found %1 device plugin(s) in %2")
-                 .arg(count).arg(pluginDir));
-    if (count > 0) onDeviceActivated(QString::fromStdString(
-                        manager_.discovered().first().id));
-    controller_.noteDeviceConnected();
+    current_ = nullptr;   // nothing open yet - a click picks the target
+    params_->setParameters({});
     updateActions(controller_.state());
 }
 
 void MainWindow::onDeviceActivated(const QString& id) {
     if (controller_.isRunning()) return;
+    clickedDeviceId_ = id;
     current_ = manager_.acquire(id);
     if (!current_) { emit logLine("ERROR", "cannot open device " + id); return; }
+    // open() may have learned the real hardware identity (model/serial are
+    // only readable from the device itself) - refresh the tree row.
+    devices_->updateDevice(current_->info());
     params_->setParameters(current_->parameters());
     emit logLine("INFO", "device opened: " + id);
+    // Mark the opened row (bold + accent) so the active camera is obvious.
+    devices_->highlightDevice(id);
+    // Device is open -> Start must light up right now.
+    controller_.noteDeviceConnected();
+    updateActions(controller_.state());
 }
 
 void MainWindow::onParameterChanged(const QString& key, const QVariant& value) {
@@ -148,11 +175,13 @@ void MainWindow::onStart() {
     calibration_ = makeDefaultScene().truth;
     if (!controller_.start(current_, calibration_))
         emit logLine("ERROR", "failed to start acquisition");
+    devices_->setLocked(true);   // no device switching while grabbing
     updateActions(controller_.state());
 }
 
 void MainWindow::onStop() {
     controller_.stop();
+    devices_->setLocked(false);   // clicking devices is allowed again
     updateActions(controller_.state());
 }
 
@@ -175,6 +204,9 @@ void MainWindow::onPreview(QImage image) {
 }
 
 void MainWindow::onStateChanged(DeviceState state) {
+    // Unlock the device tree whenever the pipeline leaves the running
+    // states - covers both manual Stop and a naturally finished scan.
+    if (!controller_.isRunning()) devices_->setLocked(false);
     updateActions(state);
     emit logLine("INFO", QString("device state -> %1")
                  .arg(QString::fromUtf8(toString(state))));

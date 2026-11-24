@@ -1,6 +1,8 @@
 #include "Docks.hpp"
 
+#include <QBrush>
 #include <QCheckBox>
+#include <QColor>
 #include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QFormLayout>
@@ -27,16 +29,76 @@ DeviceTreeDock::DeviceTreeDock(QWidget* parent)
             [this](QTreeWidgetItem* item, int) {
                 if (item) emit deviceActivated(item->text(0));
             });
+    // A single click opens the device (MainWindow::onDeviceActivated). While
+    // the tree is locked (acquisition running) clicks are swallowed.
+    connect(tree_, &QTreeWidget::itemClicked, this,
+            [this](QTreeWidgetItem* item, int) {
+                if (!item || locked_) return;
+                selectedId_ = item->text(0);
+                emit deviceSelected(selectedId_);
+            });
+}
+
+void DeviceTreeDock::setLocked(bool locked) {
+    locked_ = locked;
+    const QBrush grey(QColor(128, 128, 128));
+    for (QTreeWidgetItem* it = tree_->topLevelItem(0); it;
+         it                 = tree_->itemBelow(it)) {
+        it->setDisabled(locked);
+        for (int col = 0; col < tree_->columnCount(); ++col) {
+            it->setForeground(col, locked ? grey : tree_->palette().brush(
+                                       QPalette::WindowText));
+        }
+    }
+    if (locked) tree_->clearSelection();
+}
+
+void DeviceTreeDock::highlightDevice(const QString& id) {
+    const QBrush accent(QColor(0, 102, 204));
+    QFont bold;
+    bold.setBold(true);
+    for (QTreeWidgetItem* it = tree_->topLevelItem(0); it;
+         it                 = tree_->itemBelow(it)) {
+        const bool active = it->text(0) == id;
+        for (int col = 0; col < tree_->columnCount(); ++col) {
+            it->setBackground(col, active ? QBrush(QColor(222, 238, 255))
+                                          : QBrush());
+            it->setForeground(col, active ? accent : tree_->palette().brush(
+                                       QPalette::WindowText));
+        }
+        it->setFont(0, active ? bold : QFont());
+    }
 }
 
 void DeviceTreeDock::setDevices(const QList<DeviceInfo>& devices) {
     tree_->clear();
+    selectedId_.clear();   // a fresh enumeration invalidates the old choice
     for (const auto& info : devices) {
         auto* item = new QTreeWidgetItem(tree_);
         item->setText(0, QString::fromStdString(info.id));
         item->setText(1, QString::fromStdString(info.model));
         item->setText(2, QString::fromStdString(info.serial));
     }
+}
+
+void DeviceTreeDock::updateDevice(const DeviceInfo& info) {
+    for (QTreeWidgetItem* it = tree_->topLevelItem(0); it;
+         it                 = tree_->itemBelow(it)) {
+        if (it->text(0) == QString::fromStdString(info.id)) {
+            it->setText(1, QString::fromStdString(info.model));
+            it->setText(2, QString::fromStdString(info.serial));
+            return;
+        }
+    }
+}
+
+QString DeviceTreeDock::selectedDevice() const {
+    // Drop the selection if it no longer matches a listed device.
+    for (QTreeWidgetItem* it = tree_->topLevelItem(0); it;
+         it                 = tree_->itemBelow(it)) {
+        if (it->text(0) == selectedId_) return selectedId_;
+    }
+    return {};
 }
 
 ParameterDock::ParameterDock(QWidget* parent)

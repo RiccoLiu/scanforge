@@ -8,9 +8,9 @@ add_library(mock_camera SHARED
 target_link_libraries(mock_camera PRIVATE sf::device sf::core Qt6::Widgets)
 
 set_target_properties(mock_camera PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins"
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins"
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins"
-    PREFIX "")   # keep a friendly file name on Linux/macOS
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>/plugins"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>/plugins"
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>/plugins"
+    PREFIX "")
 
 add_library(sf::mock_camera ALIAS mock_camera)

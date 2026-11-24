@@ -160,3 +160,26 @@ ctest --preset windows-vcpkg
 - 设计并实现纯 C++17 core 与 Qt6 UI 的**单向依赖隔离**，同一条重建管线可在 GUI、CLI、单元测试三种环境下运行，CI 无 GUI 回归。
 - 实现**已知真值 + 缺陷注入**的合成扫描数据源，建立平面距离 / 点云最近邻双指标误差归因，可定量复现 2mm 标定偏置（`plane RMSE 0.00001 → 1.997 mm`）。
 - 实现三线程采集流水线与六态设备状态机，用取消令牌而非 `terminate()` 实现随时中止与优雅退出，跨线程以 `shared_ptr<const PointCloud>` 零拷贝传递。
+
+
+## 9. 待优化
+
+- UI 线程每帧做全分辨率缩放（最主要） MainWindow::onPreview()（MainWindow.cpp:200-204）对每一帧做 QPixmap::fromImage().scaled()。500 万像素 @30fps = 每秒在 UI 线程缩放 1.5 亿像素，UI 线程被占满 → 整个界面（包括鼠标响应）变卡。
+- Bayer→RGB 的 CPU 软转换 如果相机输出 Bayer/色彩格式，每帧走 MV_CC_ConvertPixelTypeEx 插值转换（HikCamera.cpp:571），这是 SDK 在 CPU 上做的双线性插值，大分辨率下非常吃 CPU。Mono8 才走零转换快路径（HikCamera.cpp:555）。
+- 无背压、无丢帧机制 采集循环不限速，处理线程（重建+滤波）跟不上时帧在事件队列里堆积 → 内存增长、延迟越来越大、CPU 持续满载。FrameQueue.hpp 里注释也写了这是留到 stage-4 的优化。
+- 信号跨线程全量拷贝 frameReady(Frame) QueuedConnection 传值会把整帧图像 vector 拷贝一次（×2：到 processing、到 controller 转发）。
+
+```
+
+// 概念示意（不落地）：
+auto owner = std::make_shared<std::vector<std::uint8_t>>(
+                 std::move(image.data));          // ① 缓冲所有权进堆
+
+// QImageCleanupFunction 签名是 void(*)(void*)，闭包经 void* 中转：
+struct BufferOwner { std::shared_ptr<std::vector<std::uint8_t>> keep; };
+
+QImage img(owner->data(), w, h, bytesPerLine, format,
+           [](void* p) { delete static_cast<BufferOwner*>(p); },
+           new BufferOwner{owner});               // ② cleanup 持有拷贝
+
+```

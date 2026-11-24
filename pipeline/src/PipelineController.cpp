@@ -40,10 +40,11 @@ PipelineController::PipelineController(QObject* parent) : QObject(parent) {
                 emit stateChanged(fsm_.state());
                 emit logMessage("INFO",
                     QString("acquisition finished after %1 frames").arg(count));
-                acquisitionThread_.quit();
-                // Stage-4 TODO: confirm the processing queue is drained before
-                // quitting, otherwise the last few frames can be dropped.
-                processingThread_.quit();
+                // Keep both worker threads alive: start() posts the next
+                // acquisition to these very event loops. Calling quit() here
+                // would make the second Start click enqueue a task on a
+                // stopped loop -> no frames, no preview. Threads are stopped
+                // only in the destructor.
             });
 
     acquisitionThread_.start();

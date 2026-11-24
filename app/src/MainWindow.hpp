@@ -72,6 +72,7 @@ private:
     DeviceManager      manager_;      // declared BEFORE controller_ on purpose
     PipelineController controller_;
     IDevice*           current_ = nullptr;
+    QString            clickedDeviceId_;   // last single-clicked device in the tree
     PointCloudPtr      lastCloud_;
     CalibrationSet     calibration_;
 };
